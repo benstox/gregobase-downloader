@@ -31,6 +31,34 @@ CLEF_TRANSPOSE = {
 HAS_NOTES = r"[cdefghijklmn]+"
 
 
+def juggle_around_episemata(neume, episema=r"_"):
+    regexp = episema + r"{2,}"
+    matches = re.finditer(regexp, neume)
+    for match in matches:
+        neume = juggle_around_episemata_in_match(neume, match, episema)
+
+    return(neume)
+
+
+def juggle_around_episemata_in_match(neume, match, episema="_"):
+    episema = str(episema).replace("\\", "")
+    start, end = match.span()
+    n_episemata = end - start
+    for i in range(n_episemata):
+        if i == 0:
+            neume = neume[:start - i] + episema + neume[end:]
+        else:
+            neume = neume[:start - i] + episema + neume[end - n_episemata - i:]
+    return(neume)
+
+
+# if __name__ == '__main__':
+#     neume = 'g_h_g_asdfasdf_s_asdfas_d_f_as_as_d_f_sdfa..asdflj...'
+#     neume = juggle_around_episemata(neume, r"\.")
+#     print("End:", neume)
+
+
+
 files = [
     filename for filename in os.listdir(GABC_DIR)
     if not filename.startswith(".")]
@@ -68,11 +96,9 @@ for filename in files:
         # replace quilismae with episemata
         neume = neume.replace("w", "_")
         # place bunched episemata adjacent to the notes they affect
-        matches = re.finditer(r"_{2,}", neume)
-        for match in matches:
-            start, end = match.span()
-            n_episemata = end - start
-            end -= n_episemata
+        neume = juggle_around_episemata(neume, r"_")
+        neume = juggle_around_episemata(neume, r"\.")
+
 
     melody = gabc
 
