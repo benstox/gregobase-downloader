@@ -52,22 +52,21 @@ def juggle_around_episemata_in_match(neume, match, episema="_"):
     return(neume)
 
 
-# if __name__ == '__main__':
-#     neume = 'g_h_g_asdfasdf_s_asdfas_d_f_as_as_d_f_sdfa..asdflj...'
-#     neume = juggle_around_episemata(neume, r"\.")
-#     print("End:", neume)
-
-
-
 files = [
     filename for filename in os.listdir(GABC_DIR)
     if not filename.startswith(".")]
 
 for filename in files:
+    print(filename)
     with open("{}/{}".format(GABC_DIR, filename), "r") as infile:
         gabc = infile.read()
 
-    meta, gabc = gabc.split("%%")
+    if sum(1 for match in re.finditer("%%", gabc)) > 1:
+        sections = gabc.split("%%")
+        gabc = sections[-1]
+        meta = "".join(sections[:-1])
+    else:
+        meta, gabc = gabc.split("%%")
 
     if "mode" in meta:
         mode = re.findall(r"(?<=mode:)(.*)(?=;)", meta)[0].strip()
@@ -89,19 +88,23 @@ for filename in files:
     clef, *neumes = re.findall(r"\(.*?\)", gabc)
     # filter out non-neumes (e.g. breaks)
     neumes = filter(lambda x: re.search(HAS_NOTES, x), neumes)
+    cleaned = []
     for neume in neumes:
         # remove non-note and non-length characters from neumes
-        for char in "()'~v":
+        for char in "()'~v/!":
             neume = neume.replace(char, "")
         # replace quilismae with episemata
         neume = neume.replace("w", "_")
         # place bunched episemata adjacent to the notes they affect
         neume = juggle_around_episemata(neume, r"_")
         neume = juggle_around_episemata(neume, r"\.")
+        # FIXME still have to deal with flats and key signatures
+        cleaned.append(neume)
 
-
-    melody = gabc
+    melody = "".join(cleaned)
 
     outfilename = re.sub(r"\.gabc$", "", filename)
     with open("{0}/{1}".format(mode_dir, outfilename), "w") as outfile:
         outfile.write(melody)
+
+print(flats)
