@@ -24,9 +24,9 @@ NOTE_VALUES = {
 }
 INVERSE_NOTE_VALUES = {v: k for k, v in NOTE_VALUES.items()}
 CLEF_TRANSPOSE = {
-    "f3": 3,  # not really true?
-    "c3": 3,
-    "c4": 0
+    "f3": -2,  # not really true?
+    "c3": 2,
+    "c4": 0,
 }
 HAS_NOTES = r"[cdefghijklmn]+"
 
@@ -50,6 +50,17 @@ def juggle_around_episemata_in_match(neume, match, episema="_"):
         else:
             neume = neume[:start - i] + episema + neume[end - n_episemata - i:]
     return(neume)
+
+
+def transpose_note(original_note, transpose_by):
+    original_value = NOTE_VALUES[original_note]
+    new_value = original_value + transpose_by
+    try:
+        new_note = INVERSE_NOTE_VALUES[new_value]
+    except KeyError:
+        raise KeyError("No known note with pitch value {0}. Wanted to transpose from original note {1} at pitch {2} by {3} semitones.".format(
+            new_value, original_note, original_value, transpose_by))
+    return(new_note)
 
 
 files = [
@@ -86,19 +97,41 @@ for filename in files:
     gabc = gabc.lower()
     # get the clef and lose the text
     clef, *neumes = re.findall(r"\(.*?\)", gabc)
+    clef = clef.replace("(", "").replace(")", "")
     # filter out non-neumes (e.g. breaks)
     neumes = filter(lambda x: re.search(HAS_NOTES, x), neumes)
     cleaned = []
     for neume in neumes:
         # remove non-note and non-length characters from neumes
-        for char in "()'~v/!":
+        for char in "()'~v/! ,":
             neume = neume.replace(char, "")
         # replace quilismae with episemata
         neume = neume.replace("w", "_")
         # place bunched episemata adjacent to the notes they affect
         neume = juggle_around_episemata(neume, r"_")
         neume = juggle_around_episemata(neume, r"\.")
-        # FIXME still have to deal with flats and key signatures
+        # flats
+        if "x" in neume:
+            to_flatten = set(re.findall("(.{1})(?=x)", neume))
+            for natural in to_flatten:
+                first_piece, *rest = neume.split(natural + "x")
+                rest = "".join(rest)
+                natural_value = NOTE_VALUES[natural]
+                flat = INVERSE_NOTE_VALUES[natural_value - 1]
+                neume = first_piece + rest.replace(natural, flat)
+        # FIXME naturals??
+        # key signatures
+        try:
+            transpose_by = CLEF_TRANSPOSE[clef]
+        except KeyError:
+            raise KeyError("Unknown clef {} in file {}.".format(clef, filename))
+
+        if transpose_by:
+            neume = "".join(
+                transpose_note(note, transpose_by)
+                for note in neume
+            )
+
         cleaned.append(neume)
 
     melody = "".join(cleaned)
