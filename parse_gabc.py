@@ -160,7 +160,7 @@ for filename in files:
         # appear above the staff
         neume = re.sub("\[.*?\]", "", neume)
         # remove non-note and non-length characters from neumes
-        for char in "()'~vr<>/! ,;:01`":
+        for char in "()'~vr<>/! ,;:`zZ":
             neume = neume.replace(char, "")
         # don't bother with neumes which are just funny custodes
         if re.search(r"^.\+$", neume):
@@ -174,6 +174,9 @@ for filename in files:
             else:
                 flat_clef = False
             continue
+        # remove any numbers
+        for char in "0123456789":
+            neume = neume.replace(char, "")
         # replace quilismae with episemata
         neume = neume.replace("w", "_")
         # place bunched episemata adjacent to the notes they affect
