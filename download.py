@@ -25,7 +25,7 @@ for link in links:
     href = link.get("href").replace("chant", "download")
     id_no = href.split("id=")[1]
     name = link.text.lower()
-    for char in "().: ":
+    for char in "().,: ":
         name = name.replace(char, "_")
     filename = "{0}_{1}.gabc".format(name, id_no)
     filename = re.sub(r"(_)(?=_)", "", filename)
