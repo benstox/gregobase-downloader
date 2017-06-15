@@ -9,14 +9,17 @@ MELODY_DIR = "melody"
 NOTE_VALUES = {
     "z": -5,  # sol
     "a": -3,  # la
+    "B": -2,  # si bemol
     "b": -1,  # si
     "c": 0,  # do
+    "D": 1,  # re bemol
     "d": 2,
     "E": 3,  # mi bemol
     "e": 4,
     "f": 5,
     "G": 6,  # sol bemol
     "g": 7,
+    "H": 8,  # la bemol
     "h": 9,
     "I": 10,  # si bemol
     "i": 11,
@@ -32,8 +35,11 @@ NOTE_VALUES = {
 NOTE_SEQUENCE = [
     "z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"
 ]
-FLAT_SEQUENCE = [
+FLAT_SEQUENCE_1 = [
     "E", "G", "I", "K"
+]
+FLAT_SEQUENCE_2 = [
+    "B", "D"
 ]
 INVERSE_NOTE_VALUES = {v: k for k, v in NOTE_VALUES.items()}
 CLEF_TRANSPOSE = {
@@ -77,9 +83,12 @@ def transpose_note(original_note, transpose_by):
 
     if original_note in NOTE_SEQUENCE:
         note_sequence = NOTE_SEQUENCE
-    elif original_note in FLAT_SEQUENCE:
+    elif original_note in FLAT_SEQUENCE_1:
         transpose_by //= 2
-        note_sequence = FLAT_SEQUENCE
+        note_sequence = FLAT_SEQUENCE_1
+    elif original_note in FLAT_SEQUENCE_2:
+        transpose_by //= 2
+        note_sequence = FLAT_SEQUENCE_2
     else:
         raise KeyError("Unknown note {}!!".format(original_note))
 
@@ -100,6 +109,10 @@ for filename in files:
     print(filename)
     with open("{}/{}".format(GABC_DIR, filename), "r") as infile:
         gabc = infile.read()
+
+    if "%%" not in gabc:
+        print("WARNING!! No %% found in {}.".format(filename))
+        continue
 
     if sum(1 for match in re.finditer("%%", gabc)) > 1:
         sections = gabc.split("%%")
@@ -147,8 +160,11 @@ for filename in files:
         # appear above the staff
         neume = re.sub("\[.*?\]", "", neume)
         # remove non-note and non-length characters from neumes
-        for char in "()'~vr/! ,;:01+`":
+        for char in "()'~vr<>/! ,;:01`":
             neume = neume.replace(char, "")
+        # don't bother with neumes which are just funny custodes
+        if re.search(r"^.\+$", neume):
+            continue
         # check whether this neume is actually a new clef
         if re.search(r"^[cf]b?[234]$", neume):
             clef = neume
@@ -180,12 +196,12 @@ for filename in files:
                 neume = first_piece + rest.replace(natural, flat)
         # naturals
         if "y" in neume:
-            to_naturalise = set(re.findall("(.{1})(?=y)", neume))
-            for flat in to_naturalise:
-                first_piece, *rest = neume.split(flat + "y")
+            to_flatten = set(re.findall("(.{1})(?=y)", neume))
+            for natural in to_flatten:
+                first_piece, *rest = neume.split(natural + "y")
                 rest = "".join(rest)
-                flattened_value = NOTE_VALUES[flat]
-                natural = INVERSE_NOTE_VALUES[flattened_value + 1]
+                natural_value = NOTE_VALUES[natural]
+                flat = INVERSE_NOTE_VALUES[natural_value - 1]
                 neume = first_piece + rest.replace(flat, natural)
         # key signatures
         try:
