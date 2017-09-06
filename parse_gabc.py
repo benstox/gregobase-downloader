@@ -180,6 +180,8 @@ for filename in files:
         # replace quilismae with episemata
         neume = neume.replace("w", "_")
         # place bunched episemata adjacent to the notes they affect
+        neume = re.sub(r"(\.)(?=_)", "_", neume)
+        neume = re.sub(r"_\.", ".", neume)
         neume = juggle_around_episemata(neume, r"_")
         neume = juggle_around_episemata(neume, r"\.")
         # flats
