@@ -60,14 +60,14 @@ def juggle_around_episemata(neume, episema=r"_"):
     regexp = episema + r"{2,}"
     matches = re.finditer(regexp, neume)
     for match in matches:
-        neume = juggle_around_episemata_in_match(neume, match, episema)
+        start, end = match.span()
+        neume = juggle_around_episemata_in_match(neume, start, end, episema)
 
     return(neume)
 
 
-def juggle_around_episemata_in_match(neume, match, episema="_"):
+def juggle_around_episemata_in_match(neume, start, end, episema="_"):
     episema = str(episema).replace("\\", "")
-    start, end = match.span()
     n_episemata = end - start
     for i in range(n_episemata):
         if i == 0:
@@ -180,6 +180,14 @@ for filename in files:
         # replace quilismae with episemata
         neume = neume.replace("w", "_")
         # place bunched episemata adjacent to the notes they affect
+        for match in re.finditer(r"[_.]{3,}", neume):
+            start, end = match.span()
+            if "." in neume[start:end]:
+                dot_pos = neume[start:end].index(".") + start
+                neume = neume[:dot_pos] + neume[dot_pos + 1:]
+                neume = juggle_around_episemata_in_match(neume, start, end-1)
+                neume = neume[:end-2] + "." + neume[end-1:]
+
         neume = re.sub(r"(\.)(?=_)", "_", neume)
         neume = re.sub(r"_\.", ".", neume)
         neume = juggle_around_episemata(neume, r"_")
@@ -224,6 +232,7 @@ for filename in files:
         cleaned.append(neume)
 
     melody = "".join(cleaned)
+    melody = re.sub(r"_{2,}", "_", melody)
 
     outfilename = re.sub(r"\.gabc$", "", filename)
     with open("{0}/{1}".format(mode_dir, outfilename), "w") as outfile:
